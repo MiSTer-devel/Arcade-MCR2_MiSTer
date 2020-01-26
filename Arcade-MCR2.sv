@@ -112,6 +112,7 @@ assign HDMI_ARY = status[1] ? 8'd9  : 8'd20;
 localparam CONF_STR = {
 	"A.MCR2;;",
 	"H0O1,Aspect Ratio,Original,Wide;",
+	"H1H0O2,Orientation,Vert,Horz;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
 	"H1O6,Control,Mode 1,Mode 2;",
@@ -121,7 +122,7 @@ localparam CONF_STR = {
 	"DIP;",
 	"-;",
 	//"O6,Service,Off,On;",
-	"OD,Video Mode,15KHz,31KHz;",
+	//"OD,Video Mode,15KHz,31KHz;",
 	"-;",
 	"R0,Reset;",
 	"J1,Fire A,Fire B,Fire C,Fire D,Fire E, Fire F,Start,Coin;",
@@ -178,7 +179,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask(direct_video),
+	.status_menumask({orientation[0],direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
@@ -369,6 +370,7 @@ reg  [7:0] input_4;
 // Game specific sound board/DIP/input settings
 always @(*) begin
 
+	orientation = 2'b00;
 	input_0 = 8'hff;
 	input_1 = 8'hff;
 	input_2 = 8'hff;
@@ -507,9 +509,9 @@ satans_hollow satans_hollow(
         .video_hs(hs),
         .video_vs(vs),
         .video_csync(cs),
-        .video_ce(ce_pix_old),
-        //.tv15Khz_mode(1'b1),
-        .tv15Khz_mode(~status[13]),
+        .video_ce(ce_pix),
+        .tv15Khz_mode(1'b1),
+        //.tv15Khz_mode(~status[13]),
         .separate_audio(1'b0),
         .audio_out_l(audio_l),
         .audio_out_r(audio_r),
@@ -529,12 +531,12 @@ satans_hollow satans_hollow(
         .dl_wr        ( ioctl_wr & !ioctl_index),
         .dl_data      ( ioctl_dout)
 );
-wire ce_pix_old;
+wire ce_pix;
 wire hs, vs, cs;
 wire hblank, vblank;
 wire HSync, VSync;
 wire [2:0] r,g,b;
-
+/*
 reg ce_pix;
 always @(posedge clk_sys) begin
         reg [2:0] div;
@@ -542,12 +544,15 @@ always @(posedge clk_sys) begin
         div <= div + 1'd1;
         ce_pix <= !div;
 end
+*/
+wire no_rotate = status[2] | direct_video | orientation[0];
 
-//arcade_video #(512,240,9) arcade_video
-arcade_video #(512,480,9) arcade_video
+arcade_video #(512,240,9) arcade_video
+//arcade_video #(512,480,9) arcade_video
 (
 	.*,
-	.ce_pix(status[13] ? ce_pix_old: ce_pix),
+	//.ce_pix(status[13] ? ce_pix_old: ce_pix),
+	//.ce_pix(status[13] ? ce_pix_old: ce_pix),
 	.clk_video(clk_sys),
 	.RGB_in({r,g,b}),
 	.HBlank(hblank),
@@ -555,7 +560,6 @@ arcade_video #(512,480,9) arcade_video
 	.HSync(hs),
 	.VSync(vs),
 
-	.no_rotate(orientation[0]),
 	.rotate_ccw(orientation[1]),
 	.fx(status[5:3])
 );
