@@ -115,18 +115,16 @@ localparam CONF_STR = {
 	"H1H0O2,Orientation,Vert,Horz;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
 	"-;",
-	"H1O6,Control,Mode 1,Mode 2;",
-	"H1-;",
-	//"H2O6,Control,Digital,Analog;",
-	//"H2-;",
+	"h2O6,Rotate,Buttons,Spinner;",
+	"h2-;",
+	"h3O6,Rotate 1P,Buttons,Spinner;",
+	"h3O7,Rotate 2P,Buttons,Spinner;",
+	"h3-;",
 	"DIP;",
 	"-;",
-	//"O6,Service,Off,On;",
-	//"OD,Video Mode,15KHz,31KHz;",
-	"-;",
 	"R0,Reset;",
-	"J1,Fire A,Fire B,Fire C,Fire D,Fire E, Fire F,Start,Coin;",
-	"jn,A,B,X,Y,L,R,Start,Select;",
+	"J1,Fire A,Fire B,Fire C,Fire D,Rotate CW,Rotate CCW,Start1+Coin,Start2+Coin;",
+	"jn,A,B,X,Y,R,L,Start,Select;",
 	"V,v",`BUILD_DATE
 };
 
@@ -152,21 +150,11 @@ wire  [1:0] buttons;
 wire        forced_scandoubler;
 wire        direct_video;
 
-wire [15:0] audio_l, audio_r;
-
-
 wire [10:0] ps2_key;
 
-wire [15:0] joy1, joy2, joy3, joy4;
-wire [15:0] joy = joy1 | joy2 | joy3 | joy4;
-wire [15:0] joy1a, joy2a, joy3a, joy4a;
-
-wire signed [8:0] mouse_x;
-wire signed [8:0] mouse_y;
-wire        mouse_strobe;
-reg   [7:0] mouse_flags;
-
-wire       rotate  = 0;//status[2];
+wire [15:0] joy1a, joy2a;
+wire [15:0] joy1, joy2;
+wire [15:0] joy = joy1 | joy2;
 
 wire [21:0] gamma_bus;
 
@@ -179,7 +167,7 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.buttons(buttons),
 	.status(status),
-	.status_menumask({orientation[0],direct_video}),
+	.status_menumask({mod_twotiger,mod_tron|mod_kroozr,orientation[0],direct_video}),
 	.forced_scandoubler(forced_scandoubler),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
@@ -192,13 +180,9 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.joystick_0(joy1),
 	.joystick_1(joy2),
-	.joystick_2(joy3),
-	.joystick_3(joy4),
 
 	.joystick_analog_0(joy1a),
 	.joystick_analog_1(joy2a),
-	.joystick_analog_2(joy3a),
-	.joystick_analog_3(joy4a),
 
 	.ps2_key(ps2_key)
 );
@@ -214,12 +198,12 @@ always @(posedge clk_sys) begin
 	reg [7:0] mod = 0;
 	if (ioctl_wr & (ioctl_index==1)) mod <= ioctl_dout;
 
-        mod_shollow    <= ( mod == 0 );
-        mod_tron       <= ( mod == 1 );
-        mod_twotiger   <= ( mod == 2 );
-        mod_wacko      <= ( mod == 3 );
-        mod_kroozr     <= ( mod == 4 );
-        mod_domino     <= ( mod == 5 );
+	mod_shollow    <= ( mod == 0 );
+	mod_tron       <= ( mod == 1 );
+	mod_twotiger   <= ( mod == 2 );
+	mod_wacko      <= ( mod == 3 );
+	mod_kroozr     <= ( mod == 4 );
+	mod_domino     <= ( mod == 5 );
 end
 
 // load the DIPS
@@ -244,8 +228,8 @@ always @(posedge clk_sys) begin
 			'h06: btn_start2        <= pressed; // F2
 			//'h04: btn_start3        <= pressed; // F3
 			//'h0C: btn_start4        <= pressed; // F4
-			//'h12: btn_fireD         <= pressed; // l-shift
-			//'h14: btn_fireC         <= pressed; // ctrl
+			'h12: btn_fireD         <= pressed; // l-shift
+			'h14: btn_fireC         <= pressed; // ctrl
 			'h11: btn_fireB         <= pressed; // alt
 			'h29: btn_fireA         <= pressed; // Space
 			// JPAC/IPAC/MAME Style Codes
@@ -263,8 +247,8 @@ always @(posedge clk_sys) begin
 			'h34: btn_right2        <= pressed; // G
 			'h1C: btn_fire2A        <= pressed; // A
 			'h1B: btn_fire2B        <= pressed; // S
-			//'h21: btn_fire2C        <= pressed; // Q
-			//'h1D: btn_fire2D        <= pressed; // W
+			'h21: btn_fire2C        <= pressed; // Q
+			'h1D: btn_fire2D        <= pressed; // W
 			//'h1D: btn_fire2E        <= pressed; // W
 			//'h1D: btn_fire2F        <= pressed; // W
 			//'h1D: btn_tilt <= pressed; // W
@@ -272,92 +256,70 @@ always @(posedge clk_sys) begin
 	end
 end
 
-reg btn_tilt   = 0;
 reg btn_left   = 0;
 reg btn_right  = 0;
 reg btn_down   = 0;
 reg btn_up     = 0;
 reg btn_fireA  = 0;
 reg btn_fireB  = 0;
-//reg btn_fireC  = 0;
-//reg btn_fireD  = 0;
-//reg btn_fireE  = 0;
-//reg btn_fireF  = 0;
+reg btn_fireC  = 0;
+reg btn_fireD  = 0;
 reg btn_coin1  = 0;
 reg btn_coin2  = 0;
-//reg btn_coin3  = 0;
-//reg btn_coin4  = 0;
 reg btn_start1 = 0;
 reg btn_start2 = 0;
-//reg btn_start3 = 0;
-//reg btn_start4 = 0;
 reg btn_up2    = 0;
 reg btn_down2  = 0;
 reg btn_left2  = 0;
 reg btn_right2 = 0;
 reg btn_fire2A = 0;
 reg btn_fire2B = 0;
-//reg btn_fire2C = 0;
-//reg btn_fire2D = 0;
-//reg btn_fire2E = 0;
-//reg btn_fire2F = 0;
+reg btn_fire2C = 0;
+reg btn_fire2D = 0;
 
-reg service;
-//assign service = status[6]; //needs changed
+wire service = sw[1][0];
 
 // Generic controls - make a module from this?
 
-wire m_tilt;
+wire m_tilt    = 0;
 
-wire m_coin1   = btn_coin1 | joy1[11];
-wire m_start1  = btn_start1 | joy1[10];
-wire m_up1     = btn_up     | joy1[3];
-wire m_down1   = btn_down   | joy1[2];
-wire m_left1   = btn_left   | joy1[1];
+wire m_start1  = btn_start1 | joy[10];
+wire m_start2  = btn_start2 | joy[11];
+wire m_coin1   = btn_coin1  | btn_coin2 | joy[10] | joy[11];
+
 wire m_right1  = btn_right  | joy1[0];
+wire m_left1   = btn_left   | joy1[1];
+wire m_down1   = btn_down   | joy1[2];
+wire m_up1     = btn_up     | joy1[3];
 wire m_fire1a  = btn_fireA  | joy1[4];
 wire m_fire1b  = btn_fireB  | joy1[5];
-//wire m_fire1c  = btn_fireC  | joy1[6];
-//wire m_fire1d  = btn_fireD  | joy1[7];
-//wire m_fire1e  = btn_fireE  | joy1[8];
-//wire m_fire1f  = btn_fireF  | joy1[9];
+wire m_fire1c  = btn_fireC  | joy1[6];
+wire m_fire1d  = btn_fireD  | joy1[7];
+wire m_rcw1    =              joy1[8];
+wire m_rccw1   =              joy1[9];
 
-wire m_coin2   = btn_coin2 | joy2[11];
-wire m_start2  = btn_start2 | joy2[10];
-wire m_left2   = btn_left2  | joy2[1];
 wire m_right2  = btn_right2 | joy2[0];
-wire m_up2     = btn_up2    | joy2[3];
+wire m_left2   = btn_left2  | joy2[1];
 wire m_down2   = btn_down2  | joy2[2];
+wire m_up2     = btn_up2    | joy2[3];
 wire m_fire2a  = btn_fire2A | joy2[4];
 wire m_fire2b  = btn_fire2B | joy2[5];
-//wire m_fire2c  = btn_fire2C | joy2[6];
-//wire m_fire2d  = btn_fire2D | joy2[7];
-//wire m_fire2e  = btn_fire2E | joy2[8];
-//wire m_fire2f  = btn_fire2F | joy2[9];
+wire m_fire2c  = btn_fire2C | joy2[6];
+wire m_fire2d  = btn_fire2D | joy2[7];
+wire m_rcw2    =              joy1[8];
+wire m_rccw2   =              joy1[9];
 
-//wire m_coin3   = joy3[9];
-wire m_start3  = joy3[8];
-//wire m_left3   = joy3[1];
-//wire m_right3  = joy3[0];
-//wire m_up3     = joy3[3];
-//wire m_down3   = joy3[2];
-//wire m_fire3a  = joy3[4];
-//wire m_fire3b  = joy3[5];
-//wire m_fire3c  = joy3[6];
-//wire m_fire3d  = joy3[7];
+wire m_right   = m_right1 | m_right2;
+wire m_left    = m_left1  | m_left2; 
+wire m_down    = m_down1  | m_down2; 
+wire m_up      = m_up1    | m_up2;   
+wire m_fire_a  = m_fire1a | m_fire2a;
+wire m_fire_b  = m_fire1b | m_fire2b;
+wire m_fire_c  = m_fire1c | m_fire2c;
+wire m_fire_d  = m_fire1d | m_fire2d;
+wire m_rcw     = m_rcw1   | m_rcw2;
+wire m_rccw    = m_rccw1  | m_rccw2;
 
-//wire m_coin4   = 0;
-//wire m_start4  = joy4[8];
-//wire m_left4   = joy4[1];
-//wire m_right4  = joy4[0];
-//wire m_up4     = joy4[3];
-//wire m_down4   = joy4[2];
-//wire m_fire4a  = joy4[4];
-//wire m_fire4b  = joy4[5];
-//wire m_fire4c  = joy4[6];
-//wire m_fire4d  = joy4[7];
-
-reg        oneplayer;
 reg  [1:0] orientation; //left/right / portrait/landscape
 reg  [7:0] input_0;
 reg  [7:0] input_1;
@@ -365,7 +327,8 @@ reg  [7:0] input_2;
 reg  [7:0] input_3;
 reg  [7:0] input_4;
 
-
+wire [7:0] ax = joy2a[7:0]  ? joy2a[7:0]  : joy1a[7:0];
+wire [7:0] ay = joy2a[15:8] ? joy2a[15:8] : joy1a[15:8];
 
 // Game specific sound board/DIP/input settings
 always @(*) begin
@@ -377,52 +340,45 @@ always @(*) begin
 	input_3 = sw[0];
 	input_4 = 8'hff;
 
-
 	if (mod_shollow) begin
-                orientation = 2'b00;
-                input_0 = ~{ service, 1'b0, m_tilt, 1'b0, m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = ~{ m_fire2a, m_fire2b, m_right2, m_left2, m_fire1a, m_fire1b, m_right1, m_left1 };
-                input_2 = 8'hFF;
-                input_3 = ~{ 8'b00000010 };
-        end else if (mod_tron) begin
-                orientation = 2'b00;
-                oneplayer = 1'b0;
-                input_0 = ~{ service, 1'b0, m_tilt, m_fire1a, m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = ~{ 1'b0, spin_angle2 };
-                input_2 = ~{ m_down1, m_up1, m_right1, m_left1, m_down1, m_up1, m_right1, m_left1 };
-                input_3 = ~{ m_fire1a, 7'b00000010 };
-                input_4 = ~{ 1'b0, spin_angle2 };
-        end else if (mod_twotiger) begin
-                orientation = 2'b01;
-                oneplayer = 1'b0;
-                input_0 = ~{ service, 1'b0, m_tilt, m_start3, m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = ~{ 1'b0, spin_angle1 };
-                input_2 = ~{ 4'b0000, m_fire2b, m_fire2a, m_fire1b, m_fire1a };
-                input_3 = 8'hFF;
-                input_4 = ~{ 1'b0, spin_angle2 };
-        end else if (mod_wacko) begin
-                orientation = 2'b01;
-                input_0 = ~{ service, 1'b0, m_tilt, 1'b0, m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = x_pos[10:3];
-                input_2 = y_pos[10:3];
-                input_3 = ~{ 8'b01000000 };
-                input_4 = ~{ m_up2, m_down2, m_left2, m_right2, m_up1, m_down1, m_left1, m_right1 };
-        end else if (mod_kroozr) begin
-                orientation = 2'b01;
-                input_0 = ~{ service, 1'b0, m_tilt, m_fire1a | mouse_btns[0], m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = ~{ (m_fire1b | mouse_btns[1]), spin_angle1[6], 3'b111, spin_angle1[5:3] };
-                input_2 = { x_pos_kroozr[9], x_pos_kroozr[9], x_pos_kroozr[7:2] };
-                input_3 = ~{ 8'b01000000 };
-                input_4 = { y_pos_kroozr[9], y_pos_kroozr[9], y_pos_kroozr[7:2] };
-        end else if (mod_domino) begin
-                orientation = 2'b01;
-                input_0 = ~{ service, 1'b0, m_tilt, m_fire1a, m_start2, m_start1, m_coin2, m_coin1 };
-                input_1 = ~{ 4'b0000, m_down1, m_up1, m_right1, m_left1 };
-                input_2 = ~{ 3'b000, m_fire2a, m_down2, m_up2, m_right2, m_left2 };
-                input_3 = ~{ 8'b01000000 };
+		input_0 = ~{ service, 1'b0, m_tilt, 1'b0, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ m_fire_a, m_fire_b, m_right, m_left, m_fire_a, m_fire_b, m_right, m_left };
+	end
+	else if (mod_tron) begin
+		input_0 = ~{ service, 1'b0, m_tilt, m_fire_a, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ 1'b0, spin_tron[7:1] };
+		input_2 = ~{ m_down, m_up, m_right, m_left, m_down, m_up, m_right, m_left };
+		input_3[7] = ~{ m_fire_a };
+		input_4 = ~{ 1'b0, spin_tron[7:1] };
+	end
+	else if (mod_twotiger) begin
+		orientation = 2'b01;
+		input_0 = ~{ service, 1'b0, m_tilt, m_fire_c, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ 1'b0, spin_angle1[7:1] };
+		input_2 = ~{ 4'b0000, m_fire2b, m_fire2a, m_fire1b, m_fire1a };
+		input_4 = ~{ 1'b0, spin_angle2[7:1] };
+	end
+	else if (mod_wacko) begin
+		orientation = 2'b01;
+		input_0 = ~{ service, 1'b0, m_tilt, 1'b0, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = wx;
+		input_2 = wy;
+		input_4 = ~{ m_fire_c, m_fire_b, m_fire_d, m_fire_a, m_fire_c, m_fire_b, m_fire_d, m_fire_a };
+	end
+	else if (mod_kroozr) begin
+		orientation = 2'b01;
+		input_0 = ~{ service, 1'b0, m_tilt, m_fire1a, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ m_fire1b, spin_krookz[7], 3'b111, spin_krookz[6:4] };
+		input_2 = 8'd100 + (ax ? {ax[7],ax[7:1]} : m_left ? -8'd63 : m_right ? 8'd63 : 8'd0);
+		input_4 = 8'd100 + (ay ? {ay[7],ay[7:1]} : m_up   ? -8'd63 : m_down  ? 8'd63 : 8'd0);
+	end
+	else if (mod_domino) begin
+		orientation = 2'b01;
+		input_0 = ~{ service, 1'b0, m_tilt, m_fire_a, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ 4'b0000, m_down, m_up, m_right, m_left };
+		input_2 = ~{ 3'b000, m_fire_a, m_down, m_up, m_right, m_left };
 	end
 end
-
 
 wire rom_download = ioctl_download && !ioctl_index;
 
@@ -444,115 +400,106 @@ wire  [7:0] ioctl_dout;
 14000 - 1BFFF  32k GFX2
 */
 reg port1_req, port2_req;
-sdram sdram(
-        .*,
-        .init_n        ( pll_locked ),
-        //.clk           ( clk_sys ),
-        .clk           ( clk_mem ),
+sdram sdram
+(
+	.*,
+	.init_n        ( pll_locked ),
+	.clk           ( clk_mem ),
 
 	// port1 used for main CPU
-        .port1_req     ( port1_req ),
-        .port1_ack     ( ),
-        .port1_a       ( ioctl_addr[23:1] ),
-        .port1_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
-        .port1_we      ( rom_download ),
-        .port1_d       ( {ioctl_dout, ioctl_dout} ),
-        .port1_q       ( ),
+	.port1_req     ( port1_req ),
+	.port1_ack     ( ),
+	.port1_a       ( ioctl_addr[23:1] ),
+	.port1_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
+	.port1_we      ( rom_download ),
+	.port1_d       ( {ioctl_dout, ioctl_dout} ),
+	.port1_q       ( ),
 
-        .cpu1_addr     ( rom_download ? 15'h7fff : rom_addr[15:1] ),
-        .cpu1_q        ( rom_do ),
+	.cpu1_addr     ( rom_download ? 15'h7fff : rom_addr[15:1] ),
+	.cpu1_q        ( rom_do ),
 
-        // port2 for sound board
-        .port2_req     ( port2_req ),
-        .port2_ack     ( ),
-        .port2_a       ( ioctl_addr[23:1] - 16'h6000 ),
-        .port2_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
-        .port2_we      ( rom_download ),
-        .port2_d       ( {ioctl_dout, ioctl_dout} ),
-        .port2_q       ( ),
+	// port2 for sound board
+	.port2_req     ( port2_req ),
+	.port2_ack     ( ),
+	.port2_a       ( ioctl_addr[23:1] - 16'h6000 ),
+	.port2_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
+	.port2_we      ( rom_download ),
+	.port2_d       ( {ioctl_dout, ioctl_dout} ),
+	.port2_q       ( ),
 
-        .snd_addr      ( rom_download ? 15'h7fff : {2'b00, snd_addr[13:1]} ),
-        .snd_q         ( snd_do )
+	.snd_addr      ( rom_download ? 15'h7fff : {2'b00, snd_addr[13:1]} ),
+	.snd_q         ( snd_do )
 );
 
 
 always @(posedge clk_sys) begin
-        reg        ioctl_wr_last = 0;
+	reg  ioctl_wr_last = 0;
 
-        ioctl_wr_last <= ioctl_wr && !ioctl_index;
-        if (rom_download) begin
-                if (~ioctl_wr_last && ioctl_wr && !ioctl_index) begin
-                        port1_req <= ~port1_req;
-                        port2_req <= ~port2_req;
-                end
-        end
+	ioctl_wr_last <= ioctl_wr && !ioctl_index;
+	if (rom_download) begin
+		if (~ioctl_wr_last && ioctl_wr && !ioctl_index) begin
+			port1_req <= ~port1_req;
+			port2_req <= ~port2_req;
+		end
+	end
 end
 
 reg reset = 1;
 reg rom_loaded = 0;
 always @(posedge clk_sys) begin
-        reg ioctl_downlD;
-        ioctl_downlD <= rom_download;
+	reg ioctl_downlD;
+	ioctl_downlD <= rom_download;
 
-        if (ioctl_downlD & ~rom_download) rom_loaded <= 1;
-        reset <= status[0] | buttons[1] | rom_download | ~rom_loaded;
+	if (ioctl_downlD & ~rom_download) rom_loaded <= 1;
+	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded;
 end
 
-satans_hollow satans_hollow(
-        .clock_40(clk_sys),
-        .reset(reset),
-        .video_r(r),
-        .video_g(g),
-        .video_b(b),
-        .video_vblank(vblank),
-        .video_hblank(hblank),
-        .video_hs(hs),
-        .video_vs(vs),
-        .video_csync(cs),
-        .video_ce(ce_pix),
-        .tv15Khz_mode(1'b1),
-        //.tv15Khz_mode(~status[13]),
-        .separate_audio(1'b0),
-        .audio_out_l(audio_l),
-        .audio_out_r(audio_r),
+satans_hollow satans_hollow
+(
+	.clock_40(clk_sys),
+	.reset(reset),
+	.video_r(r),
+	.video_g(g),
+	.video_b(b),
+	.video_vblank(vblank),
+	.video_hblank(hblank),
+	.video_hs(hs),
+	.video_vs(vs),
+	.video_csync(cs),
+	.video_ce(ce_pix),
+	.tv15Khz_mode(1'b1),
+	//.tv15Khz_mode(~status[13]),
+	.separate_audio(1'b0),
+	.audio_out_l(AUDIO_L),
+	.audio_out_r(AUDIO_R),
 
-        .input_0      ( input_0),
-        .input_1      ( input_1),
-        .input_2      ( input_2),
-        .input_3      ( input_3),
-        .input_4      ( input_4),
+	.input_0      ( input_0),
+	.input_1      ( input_1),
+	.input_2      ( input_2),
+	.input_3      ( input_3),
+	.input_4      ( input_4),
 
-        .cpu_rom_addr ( rom_addr),
-        .cpu_rom_do   ( rom_addr[0] ? rom_do[15:8] : rom_do[7:0] ),
-        .snd_rom_addr ( snd_addr),
-        .snd_rom_do   ( snd_addr[0] ? snd_do[15:8] : snd_do[7:0] ),
+	.cpu_rom_addr ( rom_addr),
+	.cpu_rom_do   ( rom_addr[0] ? rom_do[15:8] : rom_do[7:0] ),
+	.snd_rom_addr ( snd_addr),
+	.snd_rom_do   ( snd_addr[0] ? snd_do[15:8] : snd_do[7:0] ),
 
-        .dl_addr      ( ioctl_addr[16:0]),
-        .dl_wr        ( ioctl_wr & !ioctl_index),
-        .dl_data      ( ioctl_dout)
+	.dl_addr      ( ioctl_addr[16:0]),
+	.dl_wr        ( ioctl_wr & !ioctl_index),
+	.dl_data      ( ioctl_dout)
 );
+
 wire ce_pix;
 wire hs, vs, cs;
 wire hblank, vblank;
 wire HSync, VSync;
 wire [2:0] r,g,b;
-/*
-reg ce_pix;
-always @(posedge clk_sys) begin
-        reg [2:0] div;
 
-        div <= div + 1'd1;
-        ce_pix <= !div;
-end
-*/
 wire no_rotate = status[2] | direct_video | orientation[0];
 
 arcade_video #(512,240,9) arcade_video
-//arcade_video #(512,480,9) arcade_video
 (
 	.*,
-	//.ce_pix(status[13] ? ce_pix_old: ce_pix),
-	//.ce_pix(status[13] ? ce_pix_old: ce_pix),
 	.clk_video(clk_sys),
 	.RGB_in({r,g,b}),
 	.HBlank(hblank),
@@ -564,65 +511,81 @@ arcade_video #(512,240,9) arcade_video
 	.fx(status[5:3])
 );
 
-
-assign AUDIO_L = { audio_l };
-assign AUDIO_R = { audio_r };
 assign AUDIO_S = 0;
 
-// Mouse controls for Wacko
-reg signed [10:0] x_pos;
-reg signed [10:0] y_pos;
 
-always @(posedge clk_sys) begin
-        if (mouse_strobe) begin
-                if (rotate) begin
-                        x_pos <= x_pos - mouse_y;
-                        y_pos <= y_pos + mouse_x;
-                end else begin
-                        x_pos <= x_pos + mouse_x;
-                        y_pos <= y_pos + mouse_y;
-                end
-        end
-end
+// Spinner for Tron
+wire [7:0] spin_tron;
+spinner spinner_tr (
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(1),
+	.btn_left(m_rccw),
+	.btn_right(m_rcw),
+	.ctc_zc_to_2(vs),
+	.use_spinner(status[6]),
+	.spin_angle(spin_tron)
+);
 
-// Controls for Kozmik Krooz'r
-reg  signed [9:0] x_pos_kroozr;
-reg  signed [9:0] y_pos_kroozr;
-wire signed [8:0] move_x = rotate ? -mouse_y : mouse_x;
-wire signed [8:0] move_y = rotate ?  mouse_x : mouse_y;
-wire signed [9:0] x_pos_new = x_pos_kroozr - move_x;
-wire signed [9:0] y_pos_new = y_pos_kroozr + move_y;
-reg  [1:0] mouse_btns;
-always @(posedge clk_sys) begin
-        if (mouse_strobe) begin
-                mouse_btns <= mouse_flags[1:0];
-                if (!((move_x[8] & ~x_pos_kroozr[9] &  x_pos_new[9]) || (~move_x[8] &  x_pos_kroozr[9] & ~x_pos_new[9]))) x_pos_kroozr <= x_pos_new;
-                if (!((move_y[8] &  y_pos_kroozr[9] & ~y_pos_new[9]) || (~move_y[8] & ~y_pos_kroozr[9] &  y_pos_new[9]))) y_pos_kroozr <= y_pos_new;
-        end
-end
+// Spinner for Krooz'r
+wire [7:0] spin_krookz;
+spinner spinner_kr (
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(1),
+	.btn_left(m_rccw),
+	.btn_right(m_rcw),
+	.ctc_zc_to_2(vs),
+	.use_spinner(status[6]),
+	.spin_angle(spin_krookz)
+);
 
-// Spinners for Tron, Two Tigers, Krooz'r
-wire [6:0] spin_angle1;
+// Spinners Two Tigers
+wire [7:0] spin_angle1;
 spinner spinner1 (
-        .clock_40(clk_sys),
-        .reset(reset),
-        .btn_acc(1),
-        .btn_left(m_left1 | m_up1),
-        .btn_right(m_right1 | m_down1),
-        .ctc_zc_to_2(vs),
-        .spin_angle(spin_angle1)
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(1),
+	.btn_left(m_rccw1 | m_left1),
+	.btn_right(m_rcw1 | m_right1),
+	.ctc_zc_to_2(vs),
+	.use_spinner(status[6]),
+	.spin_angle(spin_angle1)
 );
 
-wire [6:0] spin_angle2;
+wire [7:0] spin_angle2;
 spinner spinner2 (
-        .clock_40(clk_sys),
-        .reset(reset),
-        .btn_acc(1),
-        .btn_left(m_left2 | m_up2),
-        .btn_right(m_right2 | m_down2),
-        .ctc_zc_to_2(vs),
-        .spin_angle(spin_angle2)
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(1),
+	.btn_left(m_rccw2 | m_left2),
+	.btn_right(m_rcw2 | m_right2),
+	.ctc_zc_to_2(vs),
+	.use_spinner(status[7]),
+	.spin_angle(spin_angle2)
 );
 
+// wacko
+wire [7:0] wx;
+spinner spinner_wx (
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(0),
+	.btn_left(m_left),
+	.btn_right(m_right),
+	.ctc_zc_to_2(vs),
+	.spin_angle(wx)
+);
+
+wire [7:0] wy;
+spinner spinner_wy (
+	.clock_40(clk_sys),
+	.reset(reset),
+	.btn_acc(0),
+	.btn_left(m_down),
+	.btn_right(m_up),
+	.ctc_zc_to_2(vs),
+	.spin_angle(wy)
+);
 
 endmodule

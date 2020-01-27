@@ -381,16 +381,18 @@ begin
 				--if vcnt = 260 then video_vs <= '0'; end if;
 				--if vcnt = 262 then video_vs <= '1'; end if;
 
-				video_hblank <= '1';
-				if hcnt >= 2+16 and hcnt < 514+16 then
+				if hcnt = 1+16 then
 					video_hblank <= '0';
+					video_vblank <= '1';
+					if vcnt >= 0 and vcnt < 240 then
+						video_vblank <= '0';
+					end if;
 				end if;
 
-				video_vblank <= '1';
-				if vcnt >= 1 and vcnt < 241 then
-					video_vblank <= '0';
+				if hcnt = 513+16 then
+					video_hblank <= '1';
 				end if;
-				
+
 				if    hs_cnt =  0 then hsync0 <= '0'; video_hs <= '0';
 				elsif hs_cnt = 47 then hsync0 <= '1'; video_hs <= '1';
 				end if;
@@ -623,7 +625,7 @@ end process;
 ---------------------------
 palette_we <= '1' when cpu_mreq_n = '0' and cpu_wr_n = '0' and cpu_addr(15 downto 7) = X"FF"&'1' else '0'; -- 0xFF80-FFFF
 
-palette_addr <= cpu_addr(6 downto 1) when palette_we = '1' else bg_palette_addr when sp_vid(2 downto 0) = "000" else  bg_attr(7 downto 6) & sp_vid;
+palette_addr <= bg_palette_addr when sp_vid(2 downto 0) = "000" else  bg_attr(7 downto 6) & sp_vid;
 
 process (clock_vid)
 begin
@@ -828,20 +830,21 @@ port map(
 
  cpu_rom_addr   => snd_rom_addr,
  cpu_rom_do     => snd_rom_do,
- cpu_rom_rd     => snd_rom_rd,
-
- dbg_cpu_addr => open --dbg_cpu_addr
+ cpu_rom_rd     => snd_rom_rd
 );
  
 -- background & sprite palette
-palette : entity work.gen_ram
+palette : entity work.dpram
 generic map( dWidth => 9, aWidth => 6)
 port map(
- clk  => clock_vidn,
- we   => palette_we,
- addr => palette_addr,
- d    => cpu_addr(0) & cpu_do,
- q    => palette_do
+ clk_a  => clock_vidn,
+ we_a   => palette_we,
+ addr_a => cpu_addr(6 downto 1),
+ d_a    => cpu_addr(0) & cpu_do,
+
+ clk_b  => clock_vidn,
+ addr_b => palette_addr,
+ q_b    => palette_do
 );
 
 end struct;
