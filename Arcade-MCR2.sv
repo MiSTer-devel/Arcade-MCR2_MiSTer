@@ -77,19 +77,6 @@ module emu
 	output [15:0] AUDIO_R,
 	output        AUDIO_S,    // 1 - signed audio samples, 0 - unsigned
 
-	//SDRAM interface with lower latency
-	output        SDRAM_CLK,
-	output        SDRAM_CKE,
-	output [12:0] SDRAM_A,
-	output  [1:0] SDRAM_BA,
-	inout  [15:0] SDRAM_DQ,
-	output        SDRAM_DQML,
-	output        SDRAM_DQMH,
-	output        SDRAM_nCS,
-	output        SDRAM_nCAS,
-	output        SDRAM_nRAS,
-	output        SDRAM_nWE, 
-
 	// Open-drain User port.
 	// 0 - D+/RX
 	// 1 - D-/TX
@@ -131,16 +118,12 @@ localparam CONF_STR = {
 ////////////////////   CLOCKS   ///////////////////
 
 wire clk_sys,clk_80M;
-wire clk_mem = clk_80M;
-wire pll_locked;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys), // 40M
-	.outclk_1(clk_80M), // 80M
-	.locked(pll_locked)
+	.outclk_0(clk_sys) // 40M
 );
 
 ///////////////////////////////////////////////////
@@ -157,6 +140,12 @@ wire [15:0] joy1, joy2;
 wire [15:0] joy = joy1 | joy2;
 
 wire [21:0] gamma_bus;
+
+wire        ioctl_download;
+wire  [7:0] ioctl_index;
+wire        ioctl_wr;
+wire [24:0] ioctl_addr;
+wire  [7:0] ioctl_dout;
 
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
@@ -383,15 +372,9 @@ end
 wire rom_download = ioctl_download && !ioctl_index;
 
 wire [15:0] rom_addr;
-wire [15:0] rom_do;
+wire  [7:0] rom_do;
 wire [13:0] snd_addr;
-wire [15:0] snd_do;
-
-wire        ioctl_download;
-wire  [7:0] ioctl_index;
-wire        ioctl_wr;
-wire [24:0] ioctl_addr;
-wire  [7:0] ioctl_dout;
+wire  [7:0] snd_do;
 
 /* ROM structure
 00000 - 0BFFF  48k CPU1
@@ -399,60 +382,21 @@ wire  [7:0] ioctl_dout;
 10000 - 13FFF  16k GFX1
 14000 - 1BFFF  32k GFX2
 */
-reg port1_req, port2_req;
-sdram sdram
+dpram #(8,16) rom
 (
-	.*,
-	.init_n        ( pll_locked ),
-	.clk           ( clk_mem ),
+	.clk_a(clk_sys),
+	.we_a(ioctl_wr && rom_download && !ioctl_addr[24:16]),
+	.addr_a(rom_download ? ioctl_addr[15:0] : rom_addr),
+	.d_a(ioctl_dout),
+	.q_a(rom_do),
 
-	// port1 used for main CPU
-	.port1_req     ( port1_req ),
-	.port1_ack     ( ),
-	.port1_a       ( ioctl_addr[23:1] ),
-	.port1_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
-	.port1_we      ( rom_download ),
-	.port1_d       ( {ioctl_dout, ioctl_dout} ),
-	.port1_q       ( ),
-
-	.cpu1_addr     ( rom_download ? 15'h7fff : rom_addr[15:1] ),
-	.cpu1_q        ( rom_do ),
-
-	// port2 for sound board
-	.port2_req     ( port2_req ),
-	.port2_ack     ( ),
-	.port2_a       ( ioctl_addr[23:1] - 16'h6000 ),
-	.port2_ds      ( {ioctl_addr[0], ~ioctl_addr[0]} ),
-	.port2_we      ( rom_download ),
-	.port2_d       ( {ioctl_dout, ioctl_dout} ),
-	.port2_q       ( ),
-
-	.snd_addr      ( rom_download ? 15'h7fff : {2'b00, snd_addr[13:1]} ),
-	.snd_q         ( snd_do )
+	.clk_b(clk_sys),
+	.addr_b({2'b11,snd_addr}),
+	.q_b(snd_do)
 );
 
-
-always @(posedge clk_sys) begin
-	reg  ioctl_wr_last = 0;
-
-	ioctl_wr_last <= ioctl_wr && !ioctl_index;
-	if (rom_download) begin
-		if (~ioctl_wr_last && ioctl_wr && !ioctl_index) begin
-			port1_req <= ~port1_req;
-			port2_req <= ~port2_req;
-		end
-	end
-end
-
-reg reset = 1;
-reg rom_loaded = 0;
-always @(posedge clk_sys) begin
-	reg ioctl_downlD;
-	ioctl_downlD <= rom_download;
-
-	if (ioctl_downlD & ~rom_download) rom_loaded <= 1;
-	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded;
-end
+reg reset;
+always @(posedge clk_sys) reset <= status[0] | buttons[1] | rom_download;
 
 satans_hollow satans_hollow
 (
@@ -479,13 +423,13 @@ satans_hollow satans_hollow
 	.input_3      ( input_3),
 	.input_4      ( input_4),
 
-	.cpu_rom_addr ( rom_addr),
-	.cpu_rom_do   ( rom_addr[0] ? rom_do[15:8] : rom_do[7:0] ),
-	.snd_rom_addr ( snd_addr),
-	.snd_rom_do   ( snd_addr[0] ? snd_do[15:8] : snd_do[7:0] ),
+	.cpu_rom_addr ( rom_addr ),
+	.cpu_rom_do   ( rom_do ),
+	.snd_rom_addr ( snd_addr ),
+	.snd_rom_do   ( snd_do ),
 
 	.dl_addr      ( ioctl_addr[16:0]),
-	.dl_wr        ( ioctl_wr & !ioctl_index),
+	.dl_wr        ( ioctl_wr & rom_download),
 	.dl_data      ( ioctl_dout)
 );
 

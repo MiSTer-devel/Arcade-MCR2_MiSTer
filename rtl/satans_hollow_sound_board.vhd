@@ -54,8 +54,8 @@ use ieee.numeric_std.all;
 
 entity satans_hollow_sound_board is
 port(
- clock_40     : in std_logic;
- reset        : in std_logic;
+ clock_40      : in std_logic;
+ reset         : in std_logic;
  
  main_cpu_addr : in std_logic_vector(7 downto 0);
  
@@ -63,18 +63,18 @@ port(
  ssio_di       : in std_logic_vector(7 downto 0); 
  ssio_do       : out std_logic_vector(7 downto 0);
  
- input_0 : in std_logic_vector(7 downto 0);
- input_1 : in std_logic_vector(7 downto 0);
- input_2 : in std_logic_vector(7 downto 0);
- input_3 : in std_logic_vector(7 downto 0);
- input_4 : in std_logic_vector(7 downto 0);
- separate_audio : in std_logic;
+ input_0       : in std_logic_vector(7 downto 0);
+ input_1       : in std_logic_vector(7 downto 0);
+ input_2       : in std_logic_vector(7 downto 0);
+ input_3       : in std_logic_vector(7 downto 0);
+ input_4       : in std_logic_vector(7 downto 0);
+ separate_audio: in std_logic;
  
- audio_out_l : out std_logic_vector(15 downto 0);
- audio_out_r : out std_logic_vector(15 downto 0);
- cpu_rom_addr : out std_logic_vector(13 downto 0);
- cpu_rom_do   : in std_logic_vector(7 downto 0);
- cpu_rom_rd   : out std_logic
+ audio_out_l   : out std_logic_vector(15 downto 0);
+ audio_out_r   : out std_logic_vector(15 downto 0);
+ cpu_rom_addr  : out std_logic_vector(13 downto 0);
+ cpu_rom_do    : in std_logic_vector(7 downto 0);
+ cpu_rom_rd    : out std_logic
  );
 end satans_hollow_sound_board;
 
@@ -100,7 +100,6 @@ architecture struct of satans_hollow_sound_board is
  signal cpu_irq_n   : std_logic;
  signal cpu_m1_n    : std_logic;
 
- 
  signal wram_we     : std_logic;
  signal wram_do     : std_logic_vector( 7 downto 0);
 
@@ -372,7 +371,7 @@ begin
 		end case;
 		
 --		volume_ch1 <= K_volume(to_integer(unsigned(ay1_port_b(6 downto 4))));
-----	volume_ch2 <= K_volume(to_integer(unsigned(ay2_port_b(6 downto 4))));
+--  	volume_ch2 <= K_volume(to_integer(unsigned(ay2_port_b(6 downto 4))));
 --		volume_ch2 <= K_volume(to_integer(unsigned(ay1_port_b(6 downto 4)))); -- use ch1 control otherwise ch2 is always OFF!
 
 		volume_ch1 <= X"FF"; -- finaly don't use volume controls
@@ -438,7 +437,7 @@ cpu_rom_rd <= '1' when cpu_mreq_n = '0' and cpu_rd_n = '0' and cpu_addr(15 downt
 wram : entity work.gen_ram
 generic map( dWidth => 8, aWidth => 10)
 port map(
- clk  => clock_sndn,
+ clk  => clock_snd,
  we   => wram_we,
  addr => cpu_addr(9 downto 0),
  d    => cpu_do,
