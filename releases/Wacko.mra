@@ -12,16 +12,10 @@
 		<dip bits="7"  name="Coin Meters" ids="1,2"/>
 		<dip bits="8"    name="Service" ids="Off,On"/>
 	</switches>
+	<buttons names="Zap Right,Zap Down,Zap Up,Zap Left,-,-,Start 1P,Start 2P,Coin" default="A,B,X,Y,Start,Select,R"/>
 	<rom index="1">
 		<part>3</part>
 	</rom>
-<romstruct>
- ROM structure
-00000 - 0BFFF  48k CPU1
-0C000 - 0FFFF  16k CPU2
-10000 - 13FFF  16k GFX1
-14000 - 1BFFF  32k GFX2
-</romstruct>
 	<rom index="0" zip="wacko.zip" md5="157209d82b536114e346517818a89184" type="merged|nonmerged">
 		<part crc="c98e29b6" name="wackocpu.2d"/>
 		<part crc="90b89774" name="wackocpu.3d"/>

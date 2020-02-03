@@ -12,16 +12,10 @@
 		<dip bits="1"    name="Dogfight" ids="1 Credit, 2 Credits"/>
 		<dip bits="8"    name="Service" ids="Off,On"/>
 	</switches>
+	<buttons names="Fire,-,-,-,Rotate Right,Rotate Left,Start 1P,Start 2P,Coin" default="A,R,L,Start,Select,Y"/>
 	<rom index="1">
 		<part>1</part>
 	</rom>
-<romstruct>
- ROM structure
-00000 - 0BFFF  48k CPU1
-0C000 - 0FFFF  16k CPU2
-10000 - 13FFF  16k GFX1
-14000 - 1BFFF  32k GFX2
-</romstruct>
 	<rom index="0" zip="tron.zip" md5="8b232b334aa20263ab1c3a77796f8885" type="merged|nonmerged">
 		<part crc="0de0471a" name="pro0.d2"/>
 		<part crc="8ddf8717" name="scpu_pgb.d3"/>

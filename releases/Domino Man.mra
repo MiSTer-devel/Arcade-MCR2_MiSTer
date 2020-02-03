@@ -14,16 +14,10 @@
 		<dip bits="7"    name="Coin Meters" ids="1,2"/>
 		<dip bits="8"    name="Service" ids="Off,On"/>
 	</switches>
+	<buttons names="Swat,-,-,-,-,-,Start 1P,Start 2P,Coin" default="A,Start,Select,R"/>
 	<rom index="1">
 		<part>5</part>
 	</rom>
-<romstruct>
- ROM structure
-00000 - 0BFFF  48k CPU1
-0C000 - 0FFFF  16k CPU2
-10000 - 13FFF  16k GFX1
-14000 - 1BFFF  32k GFX2
-</romstruct>
 	<rom index="0" zip="domino.zip" md5="112359d5a207884821f6df0f0c1c4d2c" type="merged|nonmerged">
 		<part crc="3bf3bb1c" name="dmanpg0.bin"/>
 		<part crc="85cf1d69" name="dmanpg1.bin"/>
