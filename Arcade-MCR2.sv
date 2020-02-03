@@ -110,7 +110,7 @@ localparam CONF_STR = {
 	"DIP;",
 	"-;",
 	"R0,Reset;",
-	"J1,Fire A,Fire B,Fire C,Fire D,Rotate CW,Rotate CCW,Start1+Coin,Start2+Coin;",
+	"J1,Fire A,Fire B,Fire C,Fire D,Rotate CW,Rotate CCW,Start 1P,Start 2P,Coin;",
 	"jn,A,B,X,Y,R,L,Start,Select;",
 	"V,v",`BUILD_DATE
 };
@@ -274,7 +274,7 @@ wire m_tilt    = 0;
 
 wire m_start1  = btn_start1 | joy[10];
 wire m_start2  = btn_start2 | joy[11];
-wire m_coin1   = btn_coin1  | btn_coin2 | joy[10] | joy[11];
+wire m_coin1   = btn_coin1  | btn_coin2 | joy[12];
 
 wire m_right1  = btn_right  | joy1[0];
 wire m_left1   = btn_left   | joy1[1];
@@ -295,8 +295,8 @@ wire m_fire2a  = btn_fire2A | joy2[4];
 wire m_fire2b  = btn_fire2B | joy2[5];
 wire m_fire2c  = btn_fire2C | joy2[6];
 wire m_fire2d  = btn_fire2D | joy2[7];
-wire m_rcw2    =              joy1[8];
-wire m_rccw2   =              joy1[9];
+wire m_rcw2    =              joy2[8];
+wire m_rccw2   =              joy2[9];
 
 wire m_right   = m_right1 | m_right2;
 wire m_left    = m_left1  | m_left2; 
@@ -356,8 +356,8 @@ always @(*) begin
 	end
 	else if (mod_kroozr) begin
 		orientation = 2'b01;
-		input_0 = ~{ service, 1'b0, m_tilt, m_fire1a, m_start2, m_start1, 1'b0, m_coin1 };
-		input_1 = ~{ m_fire1b, spin_krookz[7], 3'b111, spin_krookz[6:4] };
+		input_0 = ~{ service, 1'b0, m_tilt, m_fire_a, m_start2, m_start1, 1'b0, m_coin1 };
+		input_1 = ~{ m_fire_b, spin_krookz[7], 3'b111, spin_krookz[6:4] };
 		input_2 = 8'd100 + (ax ? {ax[7],ax[7:1]} : m_left ? -8'd63 : m_right ? 8'd63 : 8'd0);
 		input_4 = 8'd100 + (ay ? {ay[7],ay[7:1]} : m_up   ? -8'd63 : m_down  ? 8'd63 : 8'd0);
 	end
@@ -395,8 +395,21 @@ dpram #(8,16) rom
 	.q_b(snd_do)
 );
 
-reg reset;
-always @(posedge clk_sys) reset <= status[0] | buttons[1] | rom_download;
+// reset signal generation
+reg reset = 1;
+reg rom_loaded = 0;
+always @(posedge clk_sys) begin
+	reg ioctl_downlD;
+	reg [15:0] reset_count;
+	ioctl_downlD <= rom_download;
+
+	// generate a second reset signal - needed for some reason
+	if (status[0] | buttons[1] | ~rom_loaded) reset_count <= 16'hffff;
+	else if (reset_count != 0) reset_count <= reset_count - 1'd1;
+
+	if (ioctl_downlD & ~rom_download) rom_loaded <= 1;
+	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded | (reset_count == 16'h0001);
+end
 
 satans_hollow satans_hollow
 (
