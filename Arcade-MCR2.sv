@@ -399,16 +399,17 @@ dpram #(8,16) rom
 reg reset = 1;
 reg rom_loaded = 0;
 always @(posedge clk_sys) begin
-	reg ioctl_downlD;
-	reg [15:0] reset_count;
-	ioctl_downlD <= rom_download;
+	reg rom_downloadD;
+	integer reset_count;
+	rom_downloadD <= rom_download;
 
 	// generate a second reset signal - needed for some reason
-	if (status[0] | buttons[1] | ~rom_loaded) reset_count <= 16'hffff;
-	else if (reset_count != 0) reset_count <= reset_count - 1'd1;
+	if(reset_count) reset_count <= reset_count - 1;
 
-	if (ioctl_downlD & ~rom_download) rom_loaded <= 1;
-	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded | (reset_count == 16'h0001);
+	if (rom_downloadD & ~rom_download) rom_loaded <= 1;
+	if(~rom_loaded) reset_count <= 40000000;
+
+	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded | (reset_count == 1);
 end
 
 mcr2 mcr2
