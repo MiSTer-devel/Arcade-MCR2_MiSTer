@@ -411,7 +411,7 @@ always @(posedge clk_sys) begin
 	reset <= status[0] | buttons[1] | rom_download | ~rom_loaded | (reset_count == 16'h0001);
 end
 
-satans_hollow satans_hollow
+mcr2 mcr2
 (
 	.clock_40(clk_sys),
 	.reset(reset),
@@ -425,25 +425,24 @@ satans_hollow satans_hollow
 	.video_csync(cs),
 	.video_ce(ce_pix),
 	.tv15Khz_mode(1'b1),
-	//.tv15Khz_mode(~status[13]),
 	.separate_audio(1'b0),
 	.audio_out_l(AUDIO_L),
 	.audio_out_r(AUDIO_R),
 
-	.input_0      ( input_0),
-	.input_1      ( input_1),
-	.input_2      ( input_2),
-	.input_3      ( input_3),
-	.input_4      ( input_4),
+	.input_0(input_0),
+	.input_1(input_1),
+	.input_2(input_2),
+	.input_3(input_3),
+	.input_4(input_4),
 
-	.cpu_rom_addr ( rom_addr ),
-	.cpu_rom_do   ( rom_do ),
-	.snd_rom_addr ( snd_addr ),
-	.snd_rom_do   ( snd_do ),
+	.cpu_rom_addr(rom_addr),
+	.cpu_rom_do(rom_do),
+	.snd_rom_addr(snd_addr),
+	.snd_rom_do(snd_do),
 
-	.dl_addr      ( ioctl_addr[16:0]),
-	.dl_wr        ( ioctl_wr & rom_download),
-	.dl_data      ( ioctl_dout)
+	.dl_addr(ioctl_addr[16:0]),
+	.dl_wr(ioctl_wr&rom_download),
+	.dl_data(ioctl_dout)
 );
 
 wire ce_pix;
@@ -473,75 +472,75 @@ assign AUDIO_S = 0;
 
 // Spinner for Tron
 wire [7:0] spin_tron;
-spinner spinner_tr (
-	.clock_40(clk_sys),
+spinner #(55) spinner_tr
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(1),
-	.btn_left(m_rccw),
-	.btn_right(m_rcw),
-	.ctc_zc_to_2(vs),
+	.minus(m_rccw),
+	.plus(m_rcw),
+	.strobe(vs),
 	.use_spinner(status[6]),
 	.spin_angle(spin_tron)
 );
 
 // Spinner for Krooz'r
 wire [7:0] spin_krookz;
-spinner spinner_kr (
-	.clock_40(clk_sys),
+spinner #(55) spinner_kr
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(1),
-	.btn_left(m_rccw),
-	.btn_right(m_rcw),
-	.ctc_zc_to_2(vs),
+	.minus(m_rccw),
+	.plus(m_rcw),
+	.strobe(vs),
 	.use_spinner(status[6]),
 	.spin_angle(spin_krookz)
 );
 
 // Spinners Two Tigers
 wire [7:0] spin_angle1;
-spinner spinner1 (
-	.clock_40(clk_sys),
+spinner #(55) spinner1 
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(1),
-	.btn_left(m_rccw1 | m_left1),
-	.btn_right(m_rcw1 | m_right1),
-	.ctc_zc_to_2(vs),
+	.minus(m_rccw1 | m_left1),
+	.plus(m_rcw1 | m_right1),
+	.strobe(vs),
 	.use_spinner(status[6]),
 	.spin_angle(spin_angle1)
 );
 
 wire [7:0] spin_angle2;
-spinner spinner2 (
-	.clock_40(clk_sys),
+spinner #(55) spinner2 
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(1),
-	.btn_left(m_rccw2 | m_left2),
-	.btn_right(m_rcw2 | m_right2),
-	.ctc_zc_to_2(vs),
+	.minus(m_rccw2 | m_left2),
+	.plus(m_rcw2 | m_right2),
+	.strobe(vs),
 	.use_spinner(status[7]),
 	.spin_angle(spin_angle2)
 );
 
 // wacko
 wire [7:0] wx;
-spinner spinner_wx (
-	.clock_40(clk_sys),
+spinner #(10) spinner_wx 
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(0),
-	.btn_left(m_left),
-	.btn_right(m_right),
-	.ctc_zc_to_2(vs),
+	.minus(m_left),
+	.plus(m_right),
+	.strobe(vs),
 	.spin_angle(wx)
 );
 
 wire [7:0] wy;
-spinner spinner_wy (
-	.clock_40(clk_sys),
+spinner #(10) spinner_wy 
+(
+	.clk(clk_sys),
 	.reset(reset),
-	.btn_acc(0),
-	.btn_left(m_down),
-	.btn_right(m_up),
-	.ctc_zc_to_2(vs),
+	.minus(m_down),
+	.plus(m_up),
+	.strobe(vs),
 	.spin_angle(wy)
 );
 

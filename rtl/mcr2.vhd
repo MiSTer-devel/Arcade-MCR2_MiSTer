@@ -1,6 +1,6 @@
 ---------------------------------------------------------------------------------
 -- Midway 90010 CPU board, 91399 Video board, 90913 Sound board
--- Satans Hollow by Dar (darfpga@aol.fr) (09/11/2019)
+-- MCR2 by Dar (darfpga@aol.fr) (09/11/2019)
 -- http://darfpga.blogspot.fr
 ---------------------------------------------------------------------------------
 -- gen_ram.vhd & io_ps2_keyboard
@@ -36,12 +36,7 @@
 --   Coctail mode : NO
 --   Sound        : OK
 
---  Use with MAME roms from shollow.zip
---
---  Use make_satans_hollow_proms.bat to build vhd file from binaries
---  (CRC list included)
-
---  Satans hollow (midway mcr) Hardware caracteristics :
+--  MCR2 (midway mcr) Hardware caracteristics :
 --
 --  VIDEO : 1xZ80@3MHz CPU accessing its program rom, working ram,
 --    sprite data ram, I/O, sound board register and trigger.
@@ -61,7 +56,7 @@
 
 --    Sprites line buffer rams : 1 scan line delay flip/flop 2x256x8bits
 --
---  SOUND : see satans_hollow_sound_board.vhd
+--  SOUND : see mcr_sound_board.vhd
 
 ---------------------------------------------------------------------------------
 --  Schematics remarks :
@@ -135,7 +130,7 @@ use ieee.std_logic_1164.all;
 use ieee.std_logic_unsigned.all;
 use ieee.numeric_std.all;
 
-entity satans_hollow is
+entity mcr2 is
 port(
  clock_40     : in std_logic;
  reset        : in std_logic;
@@ -168,15 +163,14 @@ port(
 
  snd_rom_addr   : out std_logic_vector(13 downto 0);
  snd_rom_do     : in std_logic_vector(7 downto 0);
- snd_rom_rd     : out std_logic;
 
  dl_addr        : in  std_logic_vector(16 downto 0);
  dl_wr          : in  std_logic;
  dl_data        : in  std_logic_vector( 7 downto 0)
  );
-end satans_hollow;
+end mcr2;
 
-architecture struct of satans_hollow is
+architecture struct of mcr2 is
 
  signal reset_n   : std_logic;
  signal clock_vid : std_logic;
@@ -688,13 +682,6 @@ port map (
 	trg3      => ctc_counter_3_trg
 );
 
--- cpu program ROM 0x0000-0xBFFF
---rom_cpu : entity work.satans_hollow_cpu
---port map(
--- clk  => clock_vidn,
--- addr => cpu_addr(15 downto 0),
--- data => cpu_rom_do
---);
 cpu_rom_addr <= cpu_addr(15 downto 0);
 cpu_rom_rd <= '1' when cpu_mreq_n = '0' and cpu_rd_n = '0' and cpu_addr(15 downto 12) < X"C" else '0';
 
@@ -806,8 +793,7 @@ port map(
 );
 sprite_graphics_we <= '1' when dl_wr = '1' and dl_addr(16) = '1' else '0'; -- 14000-1BFFF
 
---satans_hollow_sound_board 
-sound_board : entity work.satans_hollow_sound_board
+sound_board : entity work.mcr_sound_board
 port map(
  clock_40    => clock_40,
  reset       => reset,
@@ -829,8 +815,7 @@ port map(
  audio_out_r    => audio_out_r,
 
  cpu_rom_addr   => snd_rom_addr,
- cpu_rom_do     => snd_rom_do,
- cpu_rom_rd     => snd_rom_rd
+ cpu_rom_do     => snd_rom_do
 );
  
 -- background & sprite palette
