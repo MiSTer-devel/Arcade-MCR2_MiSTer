@@ -1,15 +1,16 @@
 <misterromdescription>
 	<name>Tron</name>
-	<mameversion>0216</mameversion>
-	<mratimestamp>201912310000</mratimestamp>
-	<year>1983</year>
+	<mameversion>0218</mameversion>
+	<mratimestamp>202002110000</mratimestamp>
+	<year>1982</year>
 	<manufacturer>Bally Midway</manufacturer>
 	<category>Action</category>
 	<rbf>MCR2</rbf>
 	<setname>tron</setname>
-	<switches default="FF 00">
-		<dip bits="0"    name="Shot Speed" ids="Fast,Slow"/>
-		<dip bits="1"    name="Dogfight" ids="1 Credit, 2 Credits"/>
+	<switches default="F8,00">
+		<dip bits="0"    name="Coin Meters" ids="2,1"/>
+		<dip bits="1"    name="Cabinet" ids="Upright,Cocktail"/>
+		<dip bits="2"    name="Allow_Continue" ids="Yes,No"/>
 		<dip bits="8"    name="Service" ids="Off,On"/>
 	</switches>
 	<buttons names="Fire,-,-,-,Rotate Right,Rotate Left,Start 1P,Start 2P,Coin" default="A,R,L,Start,Select,Y"/>
