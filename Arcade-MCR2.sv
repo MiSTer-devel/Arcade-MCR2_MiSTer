@@ -135,7 +135,6 @@ wire        direct_video;
 
 wire [10:0] ps2_key;
 
-wire [15:0] joy1a, joy2a;
 wire [31:0] joy1, joy2;
 wire [31:0] joy = joy1 | joy2;
 
@@ -169,9 +168,6 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 
 	.joystick_0(joy1),
 	.joystick_1(joy2),
-
-	.joystick_analog_0(joy1a),
-	.joystick_analog_1(joy2a),
 
 	.ps2_key(ps2_key)
 );
@@ -322,9 +318,6 @@ reg  [7:0] input_2;
 reg  [7:0] input_3;
 reg  [7:0] input_4;
 
-wire [7:0] ax = joy2a[7:0]  ? joy2a[7:0]  : joy1a[7:0];
-wire [7:0] ay = joy2a[15:8] ? joy2a[15:8] : joy1a[15:8];
-
 // Game specific sound board/DIP/input settings
 always @(*) begin
 
@@ -364,8 +357,8 @@ always @(*) begin
 		orientation = 2'b01;
 		input_0 = ~{ service, 1'b0, m_tilt, m_fire_a, m_start2, m_start1, 1'b0, m_coin1 };
 		input_1 = ~{ m_fire_b, spin_krookz[7], 3'b111, spin_krookz[6:4] };
-		input_2 = 8'd100 + (ax ? {ax[7],ax[7:1]} : m_left ? -8'd63 : m_right ? 8'd63 : 8'd0);
-		input_4 = 8'd100 + (ay ? {ay[7],ay[7:1]} : m_up   ? -8'd63 : m_down  ? 8'd63 : 8'd0);
+		input_2 = 8'd100 + (m_left ? -8'd63 : m_right ? 8'd63 : 8'd0);
+		input_4 = 8'd100 + (m_up   ? -8'd63 : m_down  ? 8'd63 : 8'd0);
 	end
 	else if (mod_domino) begin
 		orientation = 2'b01;
