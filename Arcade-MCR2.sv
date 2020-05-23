@@ -77,6 +77,19 @@ module emu
 	output [15:0] AUDIO_R,
 	output        AUDIO_S,    // 1 - signed audio samples, 0 - unsigned
 
+	//SDRAM interface with lower latency
+	output        SDRAM_CLK,
+	output        SDRAM_CKE,
+	output [12:0] SDRAM_A,
+	output  [1:0] SDRAM_BA,
+	inout  [15:0] SDRAM_DQ,
+	output        SDRAM_DQML,
+	output        SDRAM_DQMH,
+	output        SDRAM_nCS,
+	output        SDRAM_nCAS,
+	output        SDRAM_nRAS,
+	output        SDRAM_nWE,
+
 	// Open-drain User port.
 	// 0 - D+/RX
 	// 1 - D-/TX
@@ -104,6 +117,8 @@ localparam CONF_STR = {
 	"-;",
 	"DIP;",
 	"-;",
+	"OA,Background Graphic,On,Off;",
+	"-;",
 	"R0,Reset;",
 	"J1,Fire A,Fire B,Fire C,Fire D,Rotate CW,Rotate CCW,Start 1P,Start 2P,Coin;",
 	"jn,A,B,X,Y,R,L,Start,Select;",
@@ -112,13 +127,16 @@ localparam CONF_STR = {
 
 ////////////////////   CLOCKS   ///////////////////
 
-wire clk_sys,clk_80M;
+wire clk_sys,clk_80m,pll_locked;
 
 pll pll
 (
 	.refclk(CLK_50M),
 	.rst(0),
-	.outclk_0(clk_sys) // 40M
+	.outclk_0(clk_sys), // 40M
+	.outclk_1(clk_80m), // 80M
+	.locked(pll_locked)
+
 );
 
 ///////////////////////////////////////////////////
@@ -142,6 +160,8 @@ wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
 
+wire [15:0] sdram_sz;
+
 hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 (
 	.clk_sys(clk_sys),
@@ -161,6 +181,9 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
 	.ioctl_index(ioctl_index),
+
+	.sdram_sz(sdram_sz),
+
 
 	.joystick_0(joy1),
 	.joystick_1(joy2),
@@ -461,16 +484,21 @@ mcr2 mcr2
 wire ce_pix;
 wire hs, vs, cs;
 wire hblank, vblank;
-wire HSync, VSync;
 wire [2:0] r,g,b;
 
 wire no_rotate = status[2] | direct_video | orientation[0];
+
+wire fg = |{r,g,b};
+
+wire [8:0] rgbdata  = status[10]? {r,g,b}  : (fg && !bg_a) ? {r,g,b} : {bg_r[7:5],bg_g[7:5],bg_b[7:5]};
+
 
 arcade_video #(512,240,9) arcade_video
 (
 	.*,
 	.clk_video(clk_sys),
-	.RGB_in({r,g,b}),
+	//.RGB_in({r,g,b}),
+	.RGB_in(rgbdata),
 	.HBlank(hblank),
 	.VBlank(vblank),
 	.HSync(hs),
@@ -556,5 +584,57 @@ spinner #(10) spinner_wy
 	.strobe(vs),
 	.spin_out(wy)
 );
+
+wire bg_download = ioctl_download && (ioctl_index == 2);
+
+reg [7:0] ioctl_dout_r;
+always @(posedge clk_sys) if(ioctl_wr & ~ioctl_addr[0]) ioctl_dout_r <= ioctl_dout;
+
+wire [31:0] pic_data;
+sdram sdram
+(
+        .*,
+
+        .init(~pll_locked),
+        .clk(clk_80m),
+        .ch1_addr(bg_download ? ioctl_addr[24:1] : pic_addr),
+        .ch1_dout(pic_data),
+        .ch1_din({ioctl_dout, ioctl_dout_r}),
+        .ch1_req(bg_download ? (ioctl_wr & ioctl_addr[0]) : pic_req),
+        .ch1_rnw(~bg_download)
+);
+
+
+reg        pic_req;
+reg [24:1] pic_addr;
+reg  [7:0] bg_r,bg_g,bg_b,bg_a;
+always @(posedge clk_sys) begin
+        reg old_vs;
+        reg use_bg = 0;
+
+        if(bg_download && sdram_sz[2:0]) use_bg <= 1;
+
+        pic_req <= 0;
+
+        if(use_bg) begin
+                if(ce_pix) begin
+                        old_vs <= vs;
+                        {bg_a,bg_b,bg_g,bg_r} <= pic_data;
+                        if(~(hblank|vblank)) begin
+                                pic_addr <= pic_addr + 2'd2;
+                                pic_req <= 1;
+                        end
+
+                        if(~old_vs & vs) begin
+                                pic_addr <= 0;
+                                pic_req <= 1;
+                        end
+                end
+        end
+        else begin
+                {bg_a,bg_b,bg_g,bg_r} <= 0;
+        end
+end
+
 
 endmodule
