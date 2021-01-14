@@ -33,4 +33,5 @@
 		<part crc="7d899790" name="wackovid.1b"/>
 		<part crc="080be3ad" name="wackovid.1a"/>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>

@@ -35,4 +35,5 @@
 		<part crc="3329f9d4" name="vgc.cb1"/>
 		<part crc="9743f873" name="vga.a1"/>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>

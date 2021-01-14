@@ -35,4 +35,5 @@
 		<part crc="4a8e76b8" name="dmanfg2.bin"/>
 		<part crc="1f39257e" name="dmanfg3.bin"/>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>
