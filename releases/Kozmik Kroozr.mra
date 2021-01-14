@@ -30758,4 +30758,5 @@ A3 AE 82 00 93 A0 74 00 85 94 66 00 7C 8A 5B 00
 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 
 </part>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>

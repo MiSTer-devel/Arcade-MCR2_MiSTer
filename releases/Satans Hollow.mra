@@ -34,4 +34,5 @@
 		<part crc="6b57f6da" name="sh-fg.02"/>
 		<part crc="37ea9d07" name="sh-fg.03"/>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>

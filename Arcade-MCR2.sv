@@ -183,10 +183,13 @@ wire  [8:0] sp1, sp2;
 wire [21:0] gamma_bus;
 
 wire        ioctl_download;
-wire  [7:0] ioctl_index;
+wire        ioctl_upload;
 wire        ioctl_wr;
 wire [24:0] ioctl_addr;
 wire  [7:0] ioctl_dout;
+wire  [7:0] ioctl_din;
+wire  [7:0] ioctl_index;
+wire        ioctl_wait;
 
 wire [15:0] sdram_sz;
 
@@ -205,10 +208,13 @@ hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
 	.direct_video(direct_video),
 
 	.ioctl_download(ioctl_download),
+	.ioctl_upload(ioctl_upload),
 	.ioctl_wr(ioctl_wr),
 	.ioctl_addr(ioctl_addr),
 	.ioctl_dout(ioctl_dout),
+	.ioctl_din(ioctl_din),
 	.ioctl_index(ioctl_index),
+	.ioctl_wait(ioctl_wait),
 
 	.sdram_sz(sdram_sz),
 
@@ -379,6 +385,9 @@ wire  [7:0] snd_do;
 10000 - 13FFF  16k GFX1
 14000 - 1BFFF  32k GFX2
 */
+
+wire [24:0] dl_addr = ioctl_addr[16:0];
+
 dpram #(8,16) rom
 (
 	.clk_a(clk_sys),
@@ -437,9 +446,12 @@ mcr2 mcr2
 	.snd_rom_addr(snd_addr),
 	.snd_rom_do(snd_do),
 
-	.dl_addr(ioctl_addr[16:0]),
-	.dl_wr(ioctl_wr&rom_download),
-	.dl_data(ioctl_dout)
+	.dl_addr(dl_addr),
+	.dl_wr(ioctl_wr & rom_download),
+	.dl_data(ioctl_dout),
+	.dl_nvram_wr(ioctl_wr & (ioctl_index=='d4)), 
+	.dl_din(ioctl_din),
+	.dl_nvram(ioctl_index=='d4)
 );
 
 wire hs, vs, cs;

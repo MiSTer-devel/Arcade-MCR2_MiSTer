@@ -48,4 +48,5 @@
 		<part crc="08e3e1a6" name="2tgrfg2.bin"/>
 		<part crc="9b22697b" name="2tgrfg3.bin"/>
 	</rom>
+	<nvram index="4" size="2048"/>
 </misterromdescription>
