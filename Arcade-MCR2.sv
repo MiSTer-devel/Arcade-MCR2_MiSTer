@@ -122,7 +122,7 @@ localparam CONF_STR = {
 	"R0,Reset;",
 	"J1,Fire A,Fire B,Fire C,Fire D,Rotate CW,Rotate CCW,Start 1P,Start 2P,Coin;",
 	"jn,A,B,X,Y,R,L,Start,Select,R;",
-	"jp,B,A,Y,X,R,L,Start,,Select;",
+	"jp,B,A,Y,X,R,L,Start,Select,R;",
 	"V,v",`BUILD_DATE
 };
 
@@ -291,8 +291,8 @@ wire service = sw[1][0];
 
 wire m_tilt    = 0;
 
-wire m_start1  = btn_start1 | joy[10];
-wire m_start2  = btn_start2 | joy[11];
+wire m_start1  = btn_start1 | joy1[10];
+wire m_start2  = btn_start2 | joy[11] | joy2[10];
 wire m_coin1   = btn_coin1  | btn_coin2 | joy[12];
 
 wire m_right1  = btn_right  | joy1[0];
