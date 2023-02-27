@@ -29,7 +29,7 @@ module emu
 	input         RESET,
 
 	//Must be passed to hps_io module
-	inout  [45:0] HPS_BUS,
+	inout  [48:0] HPS_BUS,
 
 	//Base video clock. Usually equals to CLK_SYS.
 	output        CLK_VIDEO,
@@ -39,8 +39,9 @@ module emu
 	output        CE_PIXEL,
 
 	//Video aspect ratio for HDMI. Most retro systems have ratio 4:3.
-	output [11:0] VIDEO_ARX,
-	output [11:0] VIDEO_ARY,
+	//if VIDEO_ARX[12] or VIDEO_ARY[12] is set then [11:0] contains scaled size instead of aspect ratio.
+	output [12:0] VIDEO_ARX,
+	output [12:0] VIDEO_ARY,
 
 	output  [7:0] VGA_R,
 	output  [7:0] VGA_G,
@@ -51,14 +52,20 @@ module emu
 	output        VGA_F1,
 	output [1:0]  VGA_SL,
 	output        VGA_SCALER, // Force VGA scaler
+	output        VGA_DISABLE, // analog out is off
 
-	// Use framebuffer from DDRAM (USE_FB=1 in qsf)
+	input  [11:0] HDMI_WIDTH,
+	input  [11:0] HDMI_HEIGHT,
+	output        HDMI_FREEZE,
+
+`ifdef MISTER_FB
+	// Use framebuffer in DDRAM
 	// FB_FORMAT:
 	//    [2:0] : 011=8bpp(palette) 100=16bpp 101=24bpp 110=32bpp
 	//    [3]   : 0=16bits 565 1=16bits 1555
 	//    [4]   : 0=RGB  1=BGR (for 16/24/32 modes)
 	//
-	// FB_STRIDE either 0 (rounded to 256 bytes) or multiple of 16 bytes.
+	// FB_STRIDE either 0 (rounded to 256 bytes) or multiple of pixel size (in bytes)
 	output        FB_EN,
 	output  [4:0] FB_FORMAT,
 	output [11:0] FB_WIDTH,
@@ -69,6 +76,7 @@ module emu
 	input         FB_LL,
 	output        FB_FORCE_BLANK,
 
+`ifdef MISTER_FB_PALETTE
 	// Palette control for 8bit modes.
 	// Ignored for other video modes.
 	output        FB_PAL_CLK,
@@ -76,6 +84,8 @@ module emu
 	output [23:0] FB_PAL_DOUT,
 	input  [23:0] FB_PAL_DIN,
 	output        FB_PAL_WR,
+`endif
+`endif
 
 	output        LED_USER,  // 1 - ON, 0 - OFF.
 
@@ -85,10 +95,39 @@ module emu
 	output  [1:0] LED_POWER,
 	output  [1:0] LED_DISK,
 
-   input         CLK_AUDIO, // 24.576 MHz
+	// I/O board button press simulation (active high)
+	// b[1]: user button
+	// b[0]: osd button
+	output  [1:0] BUTTONS,
+
+	input         CLK_AUDIO, // 24.576 MHz
 	output [15:0] AUDIO_L,
 	output [15:0] AUDIO_R,
-	output        AUDIO_S,    // 1 - signed audio samples, 0 - unsigned
+	output        AUDIO_S,   // 1 - signed audio samples, 0 - unsigned
+	output  [1:0] AUDIO_MIX, // 0 - no mix, 1 - 25%, 2 - 50%, 3 - 100% (mono)
+
+	//ADC
+	inout   [3:0] ADC_BUS,
+
+	//SD-SPI
+	output        SD_SCK,
+	output        SD_MOSI,
+	input         SD_MISO,
+	output        SD_CS,
+	input         SD_CD,
+
+	//High latency DDR3 RAM interface
+	//Use for non-critical time purposes
+	output        DDRAM_CLK,
+	input         DDRAM_BUSY,
+	output  [7:0] DDRAM_BURSTCNT,
+	output [28:0] DDRAM_ADDR,
+	input  [63:0] DDRAM_DOUT,
+	input         DDRAM_DOUT_READY,
+	output        DDRAM_RD,
+	output [63:0] DDRAM_DIN,
+	output  [7:0] DDRAM_BE,
+	output        DDRAM_WE,
 
 	//SDRAM interface with lower latency
 	output        SDRAM_CLK,
@@ -103,18 +142,26 @@ module emu
 	output        SDRAM_nRAS,
 	output        SDRAM_nWE,
 
-        //High latency DDR3 RAM interface
-        //Use for non-critical time purposes
-        output        DDRAM_CLK,
-        input         DDRAM_BUSY,
-        output  [7:0] DDRAM_BURSTCNT,
-        output [28:0] DDRAM_ADDR,
-        input  [63:0] DDRAM_DOUT,
-        input         DDRAM_DOUT_READY,
-        output        DDRAM_RD,
-        output [63:0] DDRAM_DIN,
-        output  [7:0] DDRAM_BE,
-        output        DDRAM_WE,
+`ifdef MISTER_DUAL_SDRAM
+	//Secondary SDRAM
+	//Set all output SDRAM_* signals to Z ASAP if SDRAM2_EN is 0
+	input         SDRAM2_EN,
+	output        SDRAM2_CLK,
+	output [12:0] SDRAM2_A,
+	output  [1:0] SDRAM2_BA,
+	inout  [15:0] SDRAM2_DQ,
+	output        SDRAM2_nCS,
+	output        SDRAM2_nCAS,
+	output        SDRAM2_nRAS,
+	output        SDRAM2_nWE,
+`endif
+
+	input         UART_CTS,
+	output        UART_RTS,
+	input         UART_RXD,
+	output        UART_TXD,
+	output        UART_DTR,
+	input         UART_DSR,
 
 	// Open-drain User port.
 	// 0 - D+/RX
@@ -122,17 +169,19 @@ module emu
 	// 2..6 - USR2..USR6
 	// Set USER_OUT to 1 to read from USER_IN.
 	input   [6:0] USER_IN,
-	output  [6:0] USER_OUT
-);
+	output  [6:0] USER_OUT,
 
+	input         OSD_STATUS
+);
 assign VGA_F1    = 0;
 assign VGA_SCALER= 0;
+assign VGA_DISABLE = 0;
+
 assign USER_OUT  = '1;
 assign LED_USER  = rom_download;
 assign LED_DISK  = 0;
 assign LED_POWER = 0;
 
-assign {FB_PAL_CLK, FB_FORCE_BLANK, FB_PAL_ADDR, FB_PAL_DOUT, FB_PAL_WR} = '0;
 
 wire [1:0] ar = status[17:16];
 assign VIDEO_ARX = (!ar) ? ((status[2] | orientation[0]) ? 8'd21 : 8'd20) : (ar - 1'd1);
@@ -175,6 +224,7 @@ wire [31:0] status;
 wire  [1:0] buttons;
 wire        forced_scandoubler;
 wire        direct_video;
+wire        video_rotated;
 
 wire [31:0] joy1, joy2;
 wire [31:0] joy = joy1 | joy2;
@@ -193,17 +243,16 @@ wire        ioctl_wait;
 
 wire [15:0] sdram_sz;
 
-hps_io #(.STRLEN($size(CONF_STR)>>3)) hps_io
+hps_io #(.CONF_STR(CONF_STR)) hps_io
 (
 	.clk_sys(clk_sys),
 	.HPS_BUS(HPS_BUS),
-
-	.conf_str(CONF_STR),
 
 	.buttons(buttons),
 	.status(status),
 	.status_menumask({|status[5:3],mod_twotiger,mod_tron|mod_kroozr,orientation[0],direct_video}),
 	.forced_scandoubler(forced_scandoubler),
+   .video_rotated(video_rotated),
 	.gamma_bus(gamma_bus),
 	.direct_video(direct_video),
 
@@ -465,6 +514,8 @@ wire fg = |{r,g,b};
 wire [8:0] rgbdata  = status[10]? {r,g,b}  : (fg && !bg_a) ? {r,g,b} : {bg_r[7:5],bg_g[7:5],bg_b[7:5]};
 
 wire rotate_ccw=orientation[1];
+wire flip       = 0;
+
 screen_rotate screen_rotate (.*);
 
 wire hires = status[13] && !status[5:3];
