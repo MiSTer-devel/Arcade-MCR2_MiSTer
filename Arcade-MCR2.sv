@@ -197,6 +197,7 @@ localparam CONF_STR = {
 	"H0OGH,Aspect ratio,Original,Full Screen,[ARC1],[ARC2];",
 	"H1H0O2,Orientation,Vert,Horz;",
 	"O35,Scandoubler Fx,None,HQ2x,CRT 25%,CRT 50%,CRT 75%;",
+	"O6,Flip Screen,Off,On;",
 	"D4OD,Deinterlacer Hi-Res,Off,On;",
 	"-;",
 	"DIP;",
@@ -518,7 +519,7 @@ wire fg = |{r,g,b};
 wire [8:0] rgbdata  = status[10]? {r,g,b}  : (fg && !bg_a) ? {r,g,b} : {bg_r[7:5],bg_g[7:5],bg_b[7:5]};
 
 wire rotate_ccw=orientation[1];
-wire flip       = 0;
+wire flip       = status[6];
 
 screen_rotate screen_rotate (.*);
 

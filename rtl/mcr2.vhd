@@ -169,12 +169,14 @@ port(
  dl_wr          : in  std_logic;
  dl_din         : out std_logic_vector(7 downto 0);
  dl_nvram       : in  std_logic;
- dl_nvram_wr    : in  std_logic
+ dl_nvram_wr    : in  std_logic;
+ flip_out       : out std_logic
  );
 end mcr2;
 
 architecture struct of mcr2 is
 
+ signal flip_reg  : std_logic := '0';
  signal reset_n   : std_logic;
  signal clock_vid : std_logic;
  signal clock_vidn: std_logic;
@@ -840,5 +842,20 @@ port map(
  addr_b => palette_addr,
  q_b    => palette_do
 );
+
+process (clock_vid, reset)
+begin
+    if reset = '1' then
+        flip_reg <= '0';
+    elsif rising_edge(clock_vid) then
+        if cpu_ena = '1' and cpu_ioreq_n = '0' and cpu_wr_n = '0' then
+            if cpu_addr(7 downto 0) = x"00" then
+                flip_reg <= cpu_do(4); 
+            end if;
+        end if;
+    end if;
+end process;
+
+flip_out <= flip_reg;
 
 end struct;
